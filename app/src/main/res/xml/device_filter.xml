@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Zebra Technologies Vendor ID: 0x05E0 (1504 decimal) -->
+    <!-- Matches Zebra TC501 eConnex cradle, RFD40, RFD90, and RFD8500 over USB -->
+    <usb-device vendor-id="1504" />
+</resources>
