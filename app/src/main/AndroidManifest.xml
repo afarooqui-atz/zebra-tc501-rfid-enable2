@@ -23,10 +23,11 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:label="Zebra RFID TC501"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ZebraRfidDemo">
+        android:theme="@style/Theme.ZebraRfidDemo"
+        tools:replace="android:allowBackup,android:label">
 
         <activity
             android:name=".MainActivity"
