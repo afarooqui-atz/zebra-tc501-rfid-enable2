@@ -139,8 +139,8 @@ class ZebraRfidManager(private val context: Context) : RfidEventsListener {
 
             // Configure Trigger mode so hardware trigger activates RFID scan
             val triggerInfo = TriggerInfo()
-            triggerInfo.StartTrigger.type = START_TRIGGER_TYPE.START_TRIGGER_TYPE_IMMEDIATE
-            triggerInfo.StopTrigger.type = STOP_TRIGGER_TYPE.STOP_TRIGGER_TYPE_IMMEDIATE
+            triggerInfo.StartTrigger.setTriggerType(START_TRIGGER_TYPE.START_TRIGGER_TYPE_IMMEDIATE)
+            triggerInfo.StopTrigger.setTriggerType(STOP_TRIGGER_TYPE.STOP_TRIGGER_TYPE_IMMEDIATE)
             
             // Set report configuration to include RSSI and Read Count
             val reportConfig = TagStorageSettings()
