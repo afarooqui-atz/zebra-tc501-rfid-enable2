@@ -39,8 +39,8 @@ class ZebraRfidManager(private val context: Context) : RfidEventsListener {
 
     private var readers: Readers? = null
     private var rfidReader: RFIDReader? = null
-    private var isConnected = false
-    private var isInventoryRunning = false
+    @Volatile private var isConnected = false
+    @Volatile private var isInventoryRunning = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor()
     private var listener: RfidEventListener? = null
@@ -283,22 +283,24 @@ class ZebraRfidManager(private val context: Context) : RfidEventsListener {
             val rssi = tag.peakRSSI
             val count = tag.tagSeenCount
 
-            synchronized(tagCache) {
+            val totalCount = synchronized(tagCache) {
                 val record = tagCache[epc]
+            
                 if (record != null) {
                     record.count += count
                     record.rssi = rssi
+                    record.count
                 } else {
                     tagCache[epc] = TagRecord(epc, rssi, count)
+                    count
                 }
             }
-
+            
             mainHandler.post {
-                val current = tagCache[epc]
-                listener?.onTagRead(epc, rssi, current?.count ?: count, null)
+                listener?.onTagRead(epc, rssi, totalCount, null)
             }
-        }
-    }
+                    }
+                }
 
     /**
      * Callback for status events (Handheld trigger, Disconnection, Battery).
