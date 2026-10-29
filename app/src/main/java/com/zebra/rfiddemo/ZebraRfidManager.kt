@@ -8,9 +8,9 @@ import com.zebra.rfid.api3.*
 import java.util.concurrent.Executors
 
 /**
- * Zebra RFID API3 Manager for TC501 & TC5x Enterprise Devices with RFID Sleds (RFD40, RFD8500, RFD90).
+ * Zebra RFID API3 Manager for the TC501 integrated RFID reader.
  * Handles:
- * - Reader detection (eConnex 8-pin dock, USB, Bluetooth)
+ * - Integrated reader detection through QC_SERIAL
  * - Connection lifecycle & reconnection
  * - Trigger pull/release events
  * - Tag inventory reads & RSSI telemetry
@@ -57,105 +57,169 @@ class ZebraRfidManager(private val context: Context) : RfidEventsListener {
     /**
      * Initializes the Zebra Readers object to discover connected sleds or integrated readers.
      */
+    /**
+     * Initializes the Zebra API3 SDK for the TC501 integrated RFID reader.
+     */
     fun initReaders() {
         executor.execute {
             try {
-                Log.d(TAG, "Initializing Zebra RFID API3 Readers SDK...")
-                // ENUM_TRANSPORT.ALL searches USB, eConnex, and Bluetooth paired readers
-                readers = Readers(context, ENUM_TRANSPORT.ALL)
+                Log.d(TAG, "Initializing TC501 integrated RFID through QC_SERIAL...")
+    
+                // Clean up an existing SDK object before creating another one.
+                try {
+                    readers?.Dispose()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Previous Readers instance could not be disposed cleanly.", e)
+                }
+    
+                readers = Readers(context, ENUM_TRANSPORT.QC_SERIAL)
+    
                 val availableReaders = readers?.GetAvailableRFIDReaderList()
-
+    
                 if (availableReaders.isNullOrEmpty()) {
-                    notifyError("No Zebra RFID readers detected. Connect RFD40 sled via eConnex or pair RFD8500 via Bluetooth.")
+                    notifyError(
+                        "TC501 integrated RFID reader was not detected. " +
+                        "Disconnect USB, confirm Airplane Mode is off, and verify the device OS supports integrated RFID."
+                    )
                     return@execute
                 }
-
-                val readerDevice = availableReaders[0]
-                Log.d(TAG, "Found Zebra Reader: ${readerDevice.name} [Transport: ${readerDevice.transport}]")
-                connectToReader(readerDevice)
+    
+                Log.d(TAG, "QC_SERIAL returned ${availableReaders.size} reader(s).")
+    
+                val integratedDevice = availableReaders.first()
+    
+                Log.d(
+                    TAG,
+                    "Found integrated reader: ${integratedDevice.name} " +
+                    "[Transport: ${integratedDevice.transport}]"
+                )
+    
+                connectToReader(integratedDevice)
+    
             } catch (e: InvalidUsageException) {
-                Log.e(TAG, "InvalidUsageException during init: ${e.message}", e)
-                notifyError("RFID SDK Init Failed: ${e.info ?: e.message}")
+                Log.e(TAG, "InvalidUsageException during initialization.", e)
+                notifyError("TC501 RFID SDK initialization failed: ${e.info ?: e.message}")
+    
             } catch (e: OperationFailureException) {
-                Log.e(TAG, "OperationFailureException during init: ${e.message}", e)
-                notifyError("RFID Operation Failed: ${e.vendorMessage ?: e.message}")
+                Log.e(TAG, "OperationFailureException during initialization.", e)
+                notifyError(
+                    "TC501 RFID initialization failed: ${e.vendorMessage ?: e.message}"
+                )
+    
             } catch (e: Exception) {
-                Log.e(TAG, "Unexpected error: ${e.message}", e)
-                notifyError("Error: ${e.message}")
+                Log.e(TAG, "Unexpected TC501 RFID initialization error.", e)
+                notifyError("TC501 integrated RFID error: ${e.message}")
             }
         }
     }
 
     /**
-     * Connects to the specified Zebra RFID reader device and registers event listeners.
+     * Connects to the TC501 integrated RFID reader and configures events.
+     * This is called from the RFID executor thread.
      */
     private fun connectToReader(device: ReaderDevice) {
-        executor.execute {
-            try {
-                rfidReader = device.rfidReader
-                if (rfidReader == null) {
-                    notifyError("RFIDReader instance is null for device: ${device.name}")
-                    return@execute
-                }
-
-                if (!rfidReader!!.isConnected) {
-                    Log.d(TAG, "Connecting to ${device.name}...")
-                    rfidReader!!.connect()
-                }
-
-                isConnected = true
-                configureReaderEvents()
-                configureAntennaPower(270) // Default 27.0 dBm
-
-                mainHandler.post {
-                    listener?.onReaderConnected(device.name)
-                }
-                Log.i(TAG, "Successfully connected to Zebra RFID reader: ${device.name}")
-            } catch (e: OperationFailureException) {
-                Log.e(TAG, "Failed to connect: ${e.vendorMessage}", e)
-                notifyError("Connection failed: ${e.vendorMessage ?: e.message}")
-            } catch (e: Exception) {
-                Log.e(TAG, "Connection error: ${e.message}", e)
-                notifyError("Error connecting: ${e.message}")
+        try {
+            val reader = device.rfidReader
+    
+            rfidReader = reader
+    
+            if (!reader.isConnected) {
+                Log.d(TAG, "Connecting to integrated RFID reader: ${device.name}...")
+                reader.connect()
             }
+    
+            if (!reader.isConnected) {
+                throw IllegalStateException(
+                    "The RFID SDK returned from connect(), but the reader is not connected."
+                )
+            }
+    
+            configureReaderEvents()
+    
+            isConnected = true
+            isInventoryRunning = false
+    
+            mainHandler.post {
+                listener?.onReaderConnected(device.name)
+            }
+    
+            Log.i(TAG, "Connected to TC501 integrated RFID reader: ${device.name}")
+    
+        } catch (e: InvalidUsageException) {
+            isConnected = false
+            Log.e(TAG, "Invalid RFID API usage while connecting.", e)
+            notifyError("TC501 RFID connection error: ${e.info ?: e.message}")
+    
+        } catch (e: OperationFailureException) {
+            isConnected = false
+            Log.e(TAG, "TC501 integrated RFID connection failed.", e)
+            notifyError(
+                "TC501 RFID connection failed: ${e.vendorMessage ?: e.message}"
+            )
+    
+        } catch (e: Exception) {
+            isConnected = false
+            Log.e(TAG, "Unexpected TC501 RFID connection error.", e)
+            notifyError("Error connecting to integrated RFID: ${e.message}")
         }
     }
 
     /**
-     * Registers for Tag Read, Status, and Handheld Trigger events.
+     * Registers tag, trigger, inventory, and disconnection events.
      */
     private fun configureReaderEvents() {
         val reader = rfidReader ?: return
+    
         try {
             reader.Events.addEventsListener(this)
-            
-            // Enable Tag Read Event notifications
+    
             reader.Events.setHandheldEvent(true)
             reader.Events.setTagReadEvent(true)
-            reader.Events.setAttachTagDataWithReadEvent(true)
+    
+            // eventReadNotify() retrieves tags through getReadTags().
+            reader.Events.setAttachTagDataWithReadEvent(false)
+    
             reader.Events.setReaderDisconnectEvent(true)
             reader.Events.setInventoryStartEvent(true)
             reader.Events.setInventoryStopEvent(true)
-
-            // Configure Trigger mode so hardware trigger activates RFID scan
+    
             val triggerInfo = TriggerInfo()
-            triggerInfo.StartTrigger.setTriggerType(START_TRIGGER_TYPE.START_TRIGGER_TYPE_IMMEDIATE)
-            triggerInfo.StopTrigger.setTriggerType(STOP_TRIGGER_TYPE.STOP_TRIGGER_TYPE_IMMEDIATE)
-            
-            // Set report configuration to include RSSI and Read Count
+    
+            triggerInfo.StartTrigger.setTriggerType(
+                START_TRIGGER_TYPE.START_TRIGGER_TYPE_IMMEDIATE
+            )
+    
+            triggerInfo.StopTrigger.setTriggerType(
+                STOP_TRIGGER_TYPE.STOP_TRIGGER_TYPE_IMMEDIATE
+            )
+    
+            reader.Config.setStartTrigger(triggerInfo.StartTrigger)
+            reader.Config.setStopTrigger(triggerInfo.StopTrigger)
+    
             val reportConfig = TagStorageSettings()
-            reportConfig.tagFields = arrayOf(TAG_FIELD.PEAK_RSSI, TAG_FIELD.TAG_SEEN_COUNT, TAG_FIELD.ANTENNA_ID)
+            reportConfig.tagFields = arrayOf(
+                TAG_FIELD.PEAK_RSSI,
+                TAG_FIELD.TAG_SEEN_COUNT,
+                TAG_FIELD.ANTENNA_ID
+            )
+    
             reader.Config.tagStorageSettings = reportConfig
-
-            Log.d(TAG, "Configured Zebra RFID events and report settings.")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error configuring events: ${e.message}", e)
+    
+            Log.d(TAG, "Configured TC501 integrated RFID events.")
+    
+        } catch (e: InvalidUsageException) {
+            Log.e(TAG, "Invalid RFID event configuration.", e)
+            throw e
+    
+        } catch (e: OperationFailureException) {
+            Log.e(TAG, "RFID event configuration failed.", e)
+            throw e
         }
     }
 
     /**
      * Adjusts the antenna transmit power (e.g., 100 = 10.0 dBm, 300 = 30.0 dBm).
-     */
+     
     fun configureAntennaPower(powerDbmTenths: Int) {
         executor.execute {
             val reader = rfidReader ?: return@execute
@@ -170,7 +234,7 @@ class ZebraRfidManager(private val context: Context) : RfidEventsListener {
             }
         }
     }
-
+*/
     /**
      * Starts continuous RFID inventory scanning.
      */
