@@ -31,6 +31,11 @@ jobs:
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zebra-RFID-TC501-Debug
+          path: app/build/outputs/apk/debug/*.apk
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
