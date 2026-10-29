@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.zebra.rfiddemo">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Zebra RFID API3 Service Permissions -->
     <uses-permission android:name="com.zebra.rfid.api3.permission.USE_RFID_SERVICE" />
