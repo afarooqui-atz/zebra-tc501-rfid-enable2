@@ -72,9 +72,20 @@ class ZebraRfidManager(private val context: Context) : RfidEventsListener {
                     Log.w(TAG, "Previous Readers instance could not be disposed cleanly.", e)
                 }
     
+                Log.i(TAG, "STEP 1: Creating Readers(QC_SERIAL)")
+                
                 readers = Readers(context, ENUM_TRANSPORT.QC_SERIAL)
-    
+                
+                Log.i(TAG, "STEP 2: Readers(QC_SERIAL) created successfully")
+                
+                Log.i(TAG, "STEP 3: Calling GetAvailableRFIDReaderList()")
+                
                 val availableReaders = readers?.GetAvailableRFIDReaderList()
+                
+                Log.i(
+                    TAG,
+                    "STEP 4: GetAvailableRFIDReaderList returned count=${availableReaders?.size ?: 0}"
+                )
     
                 if (availableReaders.isNullOrEmpty()) {
                     notifyError(
