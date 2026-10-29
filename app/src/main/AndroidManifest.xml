@@ -29,6 +29,10 @@
         android:theme="@style/Theme.ZebraRfidDemo"
         tools:replace="android:allowBackup,android:label">
 
+        <uses-library
+            android:name="com.qti.qrs.qc_sdk"
+            android:required="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
