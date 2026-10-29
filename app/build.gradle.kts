@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.zebra.rfiddemo"
-        minSdk = 26 // TC501 runs Android 8.1 - 14
+        minSdk = 29 // TC501 runs Android 8.1 - 14
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
