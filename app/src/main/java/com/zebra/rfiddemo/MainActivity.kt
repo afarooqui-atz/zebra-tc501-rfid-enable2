@@ -86,7 +86,7 @@ class MainActivity : AppCompatActivity(), ZebraRfidManager.RfidEventListener {
                 val clamped = progress.coerceAtLeast(10)
                 tvPowerValue.text = "$clamped dBm"
                 if (fromUser) {
-                    rfidManager.configureAntennaPower(clamped * 10)
+                    //rfidManager.configureAntennaPower(clamped * 10)
                 }
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
