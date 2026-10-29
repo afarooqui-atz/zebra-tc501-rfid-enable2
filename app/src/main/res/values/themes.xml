@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.ZebraRfidDemo" parent="android:style/Theme.Material.Light.NoActionBar">
+
+    <style name="Theme.ZebraRfidDemo" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">#212121</item>
+        <item name="colorPrimaryDark">#000000</item>
+        <item name="colorAccent">#00695C</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:colorAccent">#00695C</item>
     </style>
+
 </resources>
